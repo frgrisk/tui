@@ -10,7 +10,7 @@ updates:
     schedule:
       interval: "monthly"
     groups:
-      all-deps:
+      all-dependencies:
         patterns:
           - "*" # Matches all dependencies
         update-types:
