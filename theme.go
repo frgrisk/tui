@@ -13,7 +13,7 @@ func FormTheme() *huh.Theme {
 	// brighter variant is used in dark mode to improve contrast.
 	var (
 		accent = lipgloss.AdaptiveColor{Light: frgMagenta, Dark: frgLime}
-		white  = lipgloss.AdaptiveColor{Light: frgWhite, Dark: frgLightGray}
+		white  = lipgloss.AdaptiveColor{Light: frgDarkGray, Dark: frgLightGray}
 		gray   = lipgloss.AdaptiveColor{Light: frgDarkGray, Dark: frgGray}
 		mint   = lipgloss.AdaptiveColor{Light: frgMint, Dark: frgMint}
 		red    = lipgloss.Color("#FF0000")
