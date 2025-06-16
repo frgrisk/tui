@@ -126,7 +126,7 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 	vp := viewport.New(defaultWidth, listHeight-2)
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(frgMagenta)).
+		BorderForeground(lipgloss.Color(FrgMagenta)).
 		PaddingRight(2)
 
 	renderer, err := glamour.NewTermRenderer(

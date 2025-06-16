@@ -12,10 +12,10 @@ func FormTheme() *huh.Theme {
 	// Define adaptive colors based on the palette. Where possible a slightly
 	// brighter variant is used in dark mode to improve contrast.
 	var (
-		accent = lipgloss.AdaptiveColor{Light: frgMagenta, Dark: frgLime}
-		white  = lipgloss.AdaptiveColor{Light: frgDarkGray, Dark: frgLightGray}
-		gray   = lipgloss.AdaptiveColor{Light: frgDarkGray, Dark: frgGray}
-		mint   = lipgloss.AdaptiveColor{Light: frgMint, Dark: frgMint}
+		accent = lipgloss.AdaptiveColor{Light: FrgMagenta, Dark: FrgLime}
+		white  = lipgloss.AdaptiveColor{Light: FrgDarkGray, Dark: FrgLightGray}
+		gray   = lipgloss.AdaptiveColor{Light: FrgDarkGray, Dark: FrgGray}
+		mint   = lipgloss.AdaptiveColor{Light: FrgMint, Dark: FrgMint}
 		red    = lipgloss.Color("#FF0000")
 	)
 
@@ -29,7 +29,7 @@ func FormTheme() *huh.Theme {
 	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(accent)
 	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(accent)
 	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(accent)
-	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(lipgloss.Color(frgBlack)).Background(accent).Bold(true)
+	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(lipgloss.Color(FrgBlack)).Background(accent).Bold(true)
 	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(accent)
 	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(accent)
 	t.Focused.ErrorMessage = t.Focused.ErrorMessage.Foreground(red)
