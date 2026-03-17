@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/term"
 )
 
@@ -23,8 +22,11 @@ const (
 	FrgBlack     = "#000000"
 )
 
-var DefaultStyle = lipgloss.NewStyle().
-	Foreground(compat.AdaptiveColor{Light: lipgloss.Color(FrgMagenta), Dark: lipgloss.Color(FrgLime)})
+// DefaultStyle returns the FRG accent style adapted to the terminal background.
+func DefaultStyle(isDark bool) lipgloss.Style {
+	accent := lipgloss.LightDark(isDark)(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime))
+	return lipgloss.NewStyle().Foreground(accent)
+}
 
 // IsAccessible reports whether accessible mode should be enabled.
 // Returns true if the ACCESSIBLE env var is set or stdin is not a terminal.

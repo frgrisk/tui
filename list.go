@@ -19,10 +19,11 @@ const listHeight = 16
 const defaultWidth = 80
 
 var (
+	isDark             = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	titleStyle         = lipgloss.NewStyle().MarginLeft(2)
 	itemStyle          = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle  = DefaultStyle.PaddingLeft(2)
-	defaultListStyles  = list.DefaultStyles(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+	selectedItemStyle  = DefaultStyle(isDark).PaddingLeft(2)
+	defaultListStyles  = list.DefaultStyles(isDark)
 	paginationStyle    = defaultListStyles.PaginationStyle.PaddingLeft(4)
 	helpStyle          = defaultListStyles.HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	quitTextStyle      = lipgloss.NewStyle().Margin(1, 0, 2, 4)
