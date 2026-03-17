@@ -151,7 +151,7 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		PaddingRight(2)
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithStylePath(GlamourStyle()),
+		glamour.WithEnvironmentConfig(),
 		glamour.WithWordWrap(defaultWidth),
 	)
 	if err != nil {

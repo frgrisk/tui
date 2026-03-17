@@ -7,13 +7,14 @@ import (
 )
 
 // SpinnerTheme returns a spinner.Theme configured with the project color palette.
-// Note: uses fixed colors (not adaptive) to avoid a visual flash caused by
-// huh spinner v2 defaulting hasDarkBg to false before BackgroundColorMsg arrives.
 func SpinnerTheme() spinner.Theme {
-	return spinner.ThemeFunc(func(_ bool) *spinner.Styles {
+	return spinner.ThemeFunc(func(isDark bool) *spinner.Styles {
+		ld := lipgloss.LightDark(isDark)
+		accent := ld(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime))
+		title := ld(lipgloss.Color(FrgDarkGray), lipgloss.Color(FrgLightGray))
 		return &spinner.Styles{
-			Spinner: lipgloss.NewStyle().Foreground(lipgloss.Color(FrgLime)),
-			Title:   lipgloss.NewStyle().Foreground(lipgloss.Color(FrgLightGray)),
+			Spinner: lipgloss.NewStyle().Foreground(accent),
+			Title:   lipgloss.NewStyle().Foreground(title),
 		}
 	})
 }
