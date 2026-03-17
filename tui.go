@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"os"
+
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
+	"github.com/charmbracelet/x/term"
 )
 
 // FRG brand colors for consistent theming across applications
@@ -22,3 +25,9 @@ const (
 
 var DefaultStyle = lipgloss.NewStyle().
 	Foreground(compat.AdaptiveColor{Light: lipgloss.Color(FrgMagenta), Dark: lipgloss.Color(FrgLime)})
+
+// IsAccessible reports whether accessible mode should be enabled.
+// Returns true if the ACCESSIBLE env var is set or stdin is not a terminal.
+func IsAccessible() bool {
+	return os.Getenv("ACCESSIBLE") != "" || !term.IsTerminal(os.Stdin.Fd())
+}
