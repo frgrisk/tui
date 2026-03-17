@@ -34,3 +34,16 @@ func IsAccessible() bool {
 	return os.Getenv("ACCESSIBLE") != "" || !term.IsTerminal(os.Stdin.Fd())
 }
 
+// GlamourStyle returns the glamour style name appropriate for the terminal.
+// It respects the GLAMOUR_STYLE env var, auto-detects the terminal background
+// on TTYs, and defaults to "dark" for non-TTY environments (CI, pipes).
+func GlamourStyle() string {
+	if style := os.Getenv("GLAMOUR_STYLE"); style != "" {
+		return style
+	}
+	if term.IsTerminal(os.Stdout.Fd()) && !lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
+		return "light"
+	}
+	return "dark"
+}
+
