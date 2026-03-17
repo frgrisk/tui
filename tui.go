@@ -2,7 +2,6 @@ package tui
 
 import (
 	"os"
-	"sync"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/term"
@@ -38,23 +37,12 @@ func IsAccessible() bool {
 // GlamourStyle returns the glamour style name appropriate for the terminal.
 // It respects the GLAMOUR_STYLE env var, auto-detects the terminal background
 // on TTYs, and defaults to "dark" for non-TTY environments (CI, pipes).
-// The result is cached after the first call.
 func GlamourStyle() string {
-	glamourStyleOnce.Do(func() {
-		if style := os.Getenv("GLAMOUR_STYLE"); style != "" {
-			glamourStyleValue = style
-			return
-		}
-		if term.IsTerminal(os.Stdout.Fd()) && !lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
-			glamourStyleValue = "light"
-			return
-		}
-		glamourStyleValue = "dark"
-	})
-	return glamourStyleValue
+	if style := os.Getenv("GLAMOUR_STYLE"); style != "" {
+		return style
+	}
+	if term.IsTerminal(os.Stdout.Fd()) && !lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
+		return "light"
+	}
+	return "dark"
 }
-
-var (
-	glamourStyleOnce  sync.Once
-	glamourStyleValue string
-)
