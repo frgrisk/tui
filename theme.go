@@ -9,10 +9,12 @@ import (
 // SpinnerTheme returns a spinner.Theme configured with the project color palette.
 func SpinnerTheme() spinner.Theme {
 	return spinner.ThemeFunc(func(isDark bool) *spinner.Styles {
-		accent := lipgloss.LightDark(isDark)(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime))
+		ld := lipgloss.LightDark(isDark)
+		accent := ld(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime))
+		title := ld(lipgloss.Color(FrgDarkGray), lipgloss.Color(FrgLightGray))
 		return &spinner.Styles{
 			Spinner: lipgloss.NewStyle().Foreground(accent),
-			Title:   lipgloss.NewStyle().Foreground(accent),
+			Title:   lipgloss.NewStyle().Foreground(title),
 		}
 	})
 }
