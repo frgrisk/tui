@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
+)
 
 // FRG brand colors for consistent theming across applications
 const (
@@ -18,4 +21,4 @@ const (
 )
 
 var DefaultStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.AdaptiveColor{Light: FrgMagenta, Dark: FrgLime})
+	Foreground(compat.AdaptiveColor{Light: lipgloss.Color(FrgMagenta), Dark: lipgloss.Color(FrgLime)})

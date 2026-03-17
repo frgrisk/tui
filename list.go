@@ -3,13 +3,14 @@ package tui
 import (
 	"fmt"
 	"io"
+	"os"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/pkg/errors"
 )
 
@@ -18,12 +19,13 @@ const listHeight = 16
 const defaultWidth = 80
 
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = DefaultStyle.PaddingLeft(2)
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	titleStyle         = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle          = lipgloss.NewStyle().PaddingLeft(4)
+	selectedItemStyle  = DefaultStyle.PaddingLeft(2)
+	defaultListStyles  = list.DefaultStyles(lipgloss.HasDarkBackground(os.Stdin, os.Stdout))
+	paginationStyle    = defaultListStyles.PaginationStyle.PaddingLeft(4)
+	helpStyle          = defaultListStyles.HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	quitTextStyle      = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
 
 // InfoListItem is the interface for an info list. If an object satisfies this
@@ -123,14 +125,14 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		}
 	}
 
-	vp := viewport.New(defaultWidth, listHeight-2)
+	vp := viewport.New(viewport.WithWidth(defaultWidth), viewport.WithHeight(listHeight-2))
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color(FrgMagenta)).
 		PaddingRight(2)
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithEnvironmentConfig(),
 		glamour.WithWordWrap(defaultWidth),
 	)
 	if err != nil {
@@ -155,7 +157,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.detail {
 	case true: // detail view
 		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		case tea.KeyPressMsg:
 			switch msg.String() {
 			case "q", "ctrl+c":
 				m.quitting = true
@@ -177,7 +179,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list.SetWidth(msg.Width)
 			return m, nil
 
-		case tea.KeyMsg:
+		case tea.KeyPressMsg:
 			switch keypress := msg.String(); keypress {
 			case "ctrl+c":
 				m.quitting = true
@@ -209,18 +211,18 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the model.
-func (m InfoListModel) View() string {
+func (m InfoListModel) View() tea.View {
 	itemName, _ := m.list.StatusBarItemName()
 	if m.choice != nil {
-		return quitTextStyle.Render(fmt.Sprintf("%s %q selected", itemName, m.choice.GetName()))
+		return tea.NewView(quitTextStyle.Render(fmt.Sprintf("%s %q selected", itemName, m.choice.GetName())))
 	}
 	if m.quitting {
-		return quitTextStyle.Render(fmt.Sprintf("no %s selected", itemName))
+		return tea.NewView(quitTextStyle.Render(fmt.Sprintf("no %s selected", itemName)))
 	}
 	if m.detail {
-		return m.vp.View() + "\n" + m.viewportHelpView()
+		return tea.NewView(m.vp.View() + "\n" + m.viewportHelpView())
 	}
-	return "\n" + m.list.View()
+	return tea.NewView("\n" + m.list.View())
 }
 
 // Run starts the prompt.
@@ -233,7 +235,7 @@ func (m InfoListModel) Run() (InfoListItem, error) {
 }
 
 func (m InfoListModel) viewportHelpView() string {
-	return m.list.Styles.HelpStyle.Copy().UnsetPaddingBottom().Render(
+	return m.list.Styles.HelpStyle.UnsetPaddingBottom().Render(
 		m.list.Help.ShortHelpView([]key.Binding{
 			key.NewBinding(
 				key.WithKeys("up", "down"),
@@ -248,6 +250,6 @@ func (m InfoListModel) viewportHelpView() string {
 				key.WithHelp("q", "quit"),
 			),
 		})) +
-		m.list.Styles.HelpStyle.Copy().UnsetPaddingTop().
-			Render(fmt.Sprintf("scroll %3.f%%", m.vp.ScrollPercent()*100))
+		m.list.Styles.HelpStyle.UnsetPaddingTop().
+			Render(fmt.Sprintf("scroll %.0f%%", m.vp.ScrollPercent()*100))
 }
