@@ -2,8 +2,20 @@ package tui
 
 import (
 	"charm.land/huh/v2"
+	"charm.land/huh/v2/spinner"
 	"charm.land/lipgloss/v2"
 )
+
+// SpinnerTheme returns a spinner.Theme configured with the project color palette.
+func SpinnerTheme() spinner.Theme {
+	return spinner.ThemeFunc(func(isDark bool) *spinner.Styles {
+		accent := lipgloss.LightDark(isDark)(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime))
+		return &spinner.Styles{
+			Spinner: lipgloss.NewStyle().Foreground(accent),
+			Title:   lipgloss.NewStyle().Foreground(accent),
+		}
+	})
+}
 
 // FormTheme returns a huh.Theme configured with the project color palette.
 func FormTheme() huh.Theme {
