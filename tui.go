@@ -1,9 +1,8 @@
 package tui
 
 import (
-	"os"
-
 	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 )
 
 // FRG brand colors for consistent theming across applications
@@ -21,8 +20,5 @@ const (
 	FrgBlack     = "#000000"
 )
 
-// IsDark reports whether the terminal has a dark background.
-var IsDark = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
-
 var DefaultStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.LightDark(IsDark)(lipgloss.Color(FrgMagenta), lipgloss.Color(FrgLime)))
+	Foreground(compat.AdaptiveColor{Light: lipgloss.Color(FrgMagenta), Dark: lipgloss.Color(FrgLime)})
