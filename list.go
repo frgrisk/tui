@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/list"
@@ -18,16 +17,28 @@ const listHeight = 16
 
 const defaultWidth = 80
 
+// Static styles (no isDark dependency).
 var (
-	isDark             = lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
-	titleStyle         = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle          = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle  = DefaultStyle(isDark).PaddingLeft(2)
-	defaultListStyles  = list.DefaultStyles(isDark)
-	paginationStyle    = defaultListStyles.PaginationStyle.PaddingLeft(4)
-	helpStyle          = defaultListStyles.HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle      = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	titleStyle    = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle     = lipgloss.NewStyle().PaddingLeft(4)
+	quitTextStyle = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
+
+// listStyles holds styles that adapt to the terminal background.
+type listStyles struct {
+	selected   lipgloss.Style
+	pagination lipgloss.Style
+	help       lipgloss.Style
+}
+
+func newListStyles(isDark bool) listStyles {
+	ls := list.DefaultStyles(isDark)
+	return listStyles{
+		selected:   DefaultStyle(isDark).PaddingLeft(2),
+		pagination: ls.PaginationStyle.PaddingLeft(4),
+		help:       ls.HelpStyle.PaddingLeft(4).PaddingBottom(1),
+	}
+}
 
 // InfoListItem is the interface for an info list. If an object satisfies this
 // interface, a list prompt can be generated from a slice of these values.
@@ -53,7 +64,9 @@ func (s StringItem) GetName() string { return string(s) }
 // the detail view for the item.
 func (s StringItem) Info() string { return string(s) }
 
-type itemDelegate struct{}
+type itemDelegate struct {
+	selectedStyle lipgloss.Style
+}
 
 func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
@@ -68,7 +81,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fn := itemStyle.Render
 	if index == m.Index() {
 		fn = func(strs ...string) string {
-			return selectedItemStyle.Render("> " + strs[0])
+			return d.selectedStyle.Render("> " + strs[0])
 		}
 	}
 
@@ -85,6 +98,8 @@ type InfoListModel struct {
 	detail   bool
 
 	disableDetail bool
+	isDark        bool
+	styles        listStyles
 }
 
 // NewInfoListModelInput is the input for the NewInfoListModel function.
@@ -99,11 +114,14 @@ type NewInfoListModelInput struct {
 
 // NewInfoListModel creates a new InfoListModel with defaults.
 func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
+	isDark := true // default until tea.BackgroundColorMsg arrives
+	styles := newListStyles(isDark)
+
 	listItems := make([]list.Item, len(input.Items))
 	for i, item := range input.Items {
 		listItems[i] = item
 	}
-	l := list.New(listItems, itemDelegate{}, defaultWidth, listHeight)
+	l := list.New(listItems, itemDelegate{selectedStyle: styles.selected}, defaultWidth, listHeight)
 	if input.Title != "" {
 		l.Title = input.Title
 	}
@@ -113,8 +131,8 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 	}
 	l.SetFilteringEnabled(!input.DisableFiltering)
 	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
+	l.Styles.PaginationStyle = styles.pagination
+	l.Styles.HelpStyle = styles.help
 	if !input.DisableDetail {
 		l.AdditionalShortHelpKeys = func() []key.Binding {
 			return []key.Binding{
@@ -133,7 +151,7 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		PaddingRight(2)
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithEnvironmentConfig(),
+		glamour.WithStylePath(GlamourStyle()),
 		glamour.WithWordWrap(defaultWidth),
 	)
 	if err != nil {
@@ -144,17 +162,29 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		vp:            vp,
 		renderer:      renderer,
 		disableDetail: input.DisableDetail,
+		isDark:        isDark,
+		styles:        styles,
 	}, nil
 }
 
 // Init is the first command that is called when the program starts.
 func (m InfoListModel) Init() tea.Cmd {
-	return nil
+	return tea.RequestBackgroundColor
 }
 
 // Update is called when a message is received. Use it to inspect messages
 // and, in response, update the model and/or send a command.
 func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.BackgroundColorMsg:
+		m.isDark = msg.IsDark()
+		m.styles = newListStyles(m.isDark)
+		m.list.Styles.PaginationStyle = m.styles.pagination
+		m.list.Styles.HelpStyle = m.styles.help
+		m.list.SetDelegate(itemDelegate{selectedStyle: m.styles.selected})
+		return m, nil
+	}
+
 	switch m.detail {
 	case true: // detail view
 		switch msg := msg.(type) {
