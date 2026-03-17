@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/list"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/pkg/errors"
 )
 
@@ -17,14 +17,28 @@ const listHeight = 16
 
 const defaultWidth = 80
 
+// Static styles (no isDark dependency).
 var (
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = DefaultStyle.PaddingLeft(2)
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	titleStyle    = lipgloss.NewStyle().MarginLeft(2)
+	itemStyle     = lipgloss.NewStyle().PaddingLeft(4)
+	quitTextStyle = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
+
+// listStyles holds styles that adapt to the terminal background.
+type listStyles struct {
+	selected   lipgloss.Style
+	pagination lipgloss.Style
+	help       lipgloss.Style
+}
+
+func newListStyles(isDark bool) listStyles {
+	ls := list.DefaultStyles(isDark)
+	return listStyles{
+		selected:   DefaultStyle(isDark).PaddingLeft(2),
+		pagination: ls.PaginationStyle.PaddingLeft(4),
+		help:       ls.HelpStyle.PaddingLeft(4).PaddingBottom(1),
+	}
+}
 
 // InfoListItem is the interface for an info list. If an object satisfies this
 // interface, a list prompt can be generated from a slice of these values.
@@ -50,7 +64,9 @@ func (s StringItem) GetName() string { return string(s) }
 // the detail view for the item.
 func (s StringItem) Info() string { return string(s) }
 
-type itemDelegate struct{}
+type itemDelegate struct {
+	selectedStyle lipgloss.Style
+}
 
 func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
@@ -65,7 +81,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fn := itemStyle.Render
 	if index == m.Index() {
 		fn = func(strs ...string) string {
-			return selectedItemStyle.Render("> " + strs[0])
+			return d.selectedStyle.Render("> " + strs[0])
 		}
 	}
 
@@ -82,6 +98,8 @@ type InfoListModel struct {
 	detail   bool
 
 	disableDetail bool
+	isDark        bool
+	styles        listStyles
 }
 
 // NewInfoListModelInput is the input for the NewInfoListModel function.
@@ -96,11 +114,14 @@ type NewInfoListModelInput struct {
 
 // NewInfoListModel creates a new InfoListModel with defaults.
 func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
+	isDark := true // default until tea.BackgroundColorMsg arrives
+	styles := newListStyles(isDark)
+
 	listItems := make([]list.Item, len(input.Items))
 	for i, item := range input.Items {
 		listItems[i] = item
 	}
-	l := list.New(listItems, itemDelegate{}, defaultWidth, listHeight)
+	l := list.New(listItems, itemDelegate{selectedStyle: styles.selected}, defaultWidth, listHeight)
 	if input.Title != "" {
 		l.Title = input.Title
 	}
@@ -110,27 +131,27 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 	}
 	l.SetFilteringEnabled(!input.DisableFiltering)
 	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = paginationStyle
-	l.Styles.HelpStyle = helpStyle
+	l.Styles.PaginationStyle = styles.pagination
+	l.Styles.HelpStyle = styles.help
 	if !input.DisableDetail {
 		l.AdditionalShortHelpKeys = func() []key.Binding {
 			return []key.Binding{
 				key.NewBinding(
-					key.WithKeys(" "),
+					key.WithKeys("space"),
 					key.WithHelp("space", "show details"),
 				),
 			}
 		}
 	}
 
-	vp := viewport.New(defaultWidth, listHeight-2)
+	vp := viewport.New(viewport.WithWidth(defaultWidth), viewport.WithHeight(listHeight-2))
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.NormalBorder()).
 		BorderForeground(lipgloss.Color(FrgMagenta)).
 		PaddingRight(2)
 
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStylePath(GlamourStyle()),
 		glamour.WithWordWrap(defaultWidth),
 	)
 	if err != nil {
@@ -141,26 +162,38 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		vp:            vp,
 		renderer:      renderer,
 		disableDetail: input.DisableDetail,
+		isDark:        isDark,
+		styles:        styles,
 	}, nil
 }
 
 // Init is the first command that is called when the program starts.
 func (m InfoListModel) Init() tea.Cmd {
-	return nil
+	return tea.RequestBackgroundColor
 }
 
 // Update is called when a message is received. Use it to inspect messages
 // and, in response, update the model and/or send a command.
 func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.BackgroundColorMsg:
+		m.isDark = msg.IsDark()
+		m.styles = newListStyles(m.isDark)
+		m.list.Styles.PaginationStyle = m.styles.pagination
+		m.list.Styles.HelpStyle = m.styles.help
+		m.list.SetDelegate(itemDelegate{selectedStyle: m.styles.selected})
+		return m, nil
+	}
+
 	switch m.detail {
 	case true: // detail view
 		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		case tea.KeyPressMsg:
 			switch msg.String() {
 			case "q", "ctrl+c":
 				m.quitting = true
 				return m, tea.Quit
-			case " ", "esc":
+			case "space", "esc":
 				m.detail = !m.detail
 				return m, nil
 			default:
@@ -177,7 +210,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list.SetWidth(msg.Width)
 			return m, nil
 
-		case tea.KeyMsg:
+		case tea.KeyPressMsg:
 			switch keypress := msg.String(); keypress {
 			case "ctrl+c":
 				m.quitting = true
@@ -188,7 +221,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.choice = i
 				}
 				return m, tea.Quit
-			case " ":
+			case "space":
 				if m.disableDetail {
 					return m, nil
 				}
@@ -209,18 +242,18 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the model.
-func (m InfoListModel) View() string {
+func (m InfoListModel) View() tea.View {
 	itemName, _ := m.list.StatusBarItemName()
 	if m.choice != nil {
-		return quitTextStyle.Render(fmt.Sprintf("%s %q selected", itemName, m.choice.GetName()))
+		return tea.NewView(quitTextStyle.Render(fmt.Sprintf("%s %q selected", itemName, m.choice.GetName())))
 	}
 	if m.quitting {
-		return quitTextStyle.Render(fmt.Sprintf("no %s selected", itemName))
+		return tea.NewView(quitTextStyle.Render(fmt.Sprintf("no %s selected", itemName)))
 	}
 	if m.detail {
-		return m.vp.View() + "\n" + m.viewportHelpView()
+		return tea.NewView(m.vp.View() + "\n" + m.viewportHelpView())
 	}
-	return "\n" + m.list.View()
+	return tea.NewView("\n" + m.list.View())
 }
 
 // Run starts the prompt.
@@ -233,14 +266,14 @@ func (m InfoListModel) Run() (InfoListItem, error) {
 }
 
 func (m InfoListModel) viewportHelpView() string {
-	return m.list.Styles.HelpStyle.Copy().UnsetPaddingBottom().Render(
+	return m.list.Styles.HelpStyle.UnsetPaddingBottom().Render(
 		m.list.Help.ShortHelpView([]key.Binding{
 			key.NewBinding(
 				key.WithKeys("up", "down"),
 				key.WithHelp("↑/↓", "navigate"),
 			),
 			key.NewBinding(
-				key.WithKeys(" ", "esc"),
+				key.WithKeys("space", "esc"),
 				key.WithHelp("space/esc", "back to list"),
 			),
 			key.NewBinding(
@@ -248,6 +281,6 @@ func (m InfoListModel) viewportHelpView() string {
 				key.WithHelp("q", "quit"),
 			),
 		})) +
-		m.list.Styles.HelpStyle.Copy().UnsetPaddingTop().
-			Render(fmt.Sprintf("scroll %3.f%%", m.vp.ScrollPercent()*100))
+		m.list.Styles.HelpStyle.UnsetPaddingTop().
+			Render(fmt.Sprintf("scroll %.0f%%", m.vp.ScrollPercent()*100))
 }
