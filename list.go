@@ -118,7 +118,7 @@ func NewInfoListModel(input NewInfoListModelInput) (InfoListModel, error) {
 		l.AdditionalShortHelpKeys = func() []key.Binding {
 			return []key.Binding{
 				key.NewBinding(
-					key.WithKeys(" "),
+					key.WithKeys("space"),
 					key.WithHelp("space", "show details"),
 				),
 			}
@@ -162,7 +162,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				m.quitting = true
 				return m, tea.Quit
-			case " ", "esc":
+			case "space", "esc":
 				m.detail = !m.detail
 				return m, nil
 			default:
@@ -190,7 +190,7 @@ func (m InfoListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.choice = i
 				}
 				return m, tea.Quit
-			case " ":
+			case "space":
 				if m.disableDetail {
 					return m, nil
 				}
@@ -242,7 +242,7 @@ func (m InfoListModel) viewportHelpView() string {
 				key.WithHelp("↑/↓", "navigate"),
 			),
 			key.NewBinding(
-				key.WithKeys(" ", "esc"),
+				key.WithKeys("space", "esc"),
 				key.WithHelp("space/esc", "back to list"),
 			),
 			key.NewBinding(
